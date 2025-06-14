@@ -1,73 +1,108 @@
-# Welcome to your Lovable project
+# Arogya Sahayak - Rural Health AI Aid
 
-## Project info
+An AI-powered diagnostic assistant designed for ASHA (Accredited Social Health Activist) workers to support healthcare delivery in rural communities.
 
-**URL**: https://lovable.dev/projects/09245f87-f3e3-47c9-9e65-a7de89f4e4c0
+## Overview
 
-## How can I edit this code?
+Arogya Sahayak helps ASHA workers with:
+- **AI-Powered Diagnosis**: Upload images and describe symptoms for instant AI analysis
+- **Patient Management**: Comprehensive patient records and medical history tracking
+- **Community Health Monitoring**: Village-level health statistics and outbreak alerts
+- **Report Generation**: Automated diagnostic and health reports
+- **Multilingual Support**: Available in English and Hindi
 
-There are several ways of editing your application.
+## Features
 
-**Use Lovable**
+### 🔬 New Diagnosis
+- Image capture/upload for affected areas
+- Symptom description and analysis
+- AI-generated diagnosis with confidence levels
+- Treatment recommendations and follow-up instructions
+- Risk assessment and severity classification
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/09245f87-f3e3-47c9-9e65-a7de89f4e4c0) and start prompting.
+### 👥 Patient History
+- Complete patient demographics and medical records
+- Visit tracking and history management
+- Individual patient report generation
+- Search and filter capabilities
 
-Changes made via Lovable will be committed automatically to this repo.
+### 🗺️ Community Health Map
+- Real-time community health statistics
+- Village-specific health status monitoring
+- Disease trend analysis and outbreak alerts
+- Common condition tracking by region
 
-**Use your preferred IDE**
+### 📊 Reports
+- Automated diagnostic report generation
+- Monthly and weekly health statistics
+- Export capabilities for health authorities
+- Data visualization and insights
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Technology Stack
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Frontend
+- **React** with TypeScript
+- **Vite** for build tooling
+- **Tailwind CSS** for styling
+- **shadcn/ui** component library
 
-Follow these steps:
+### Backend
+- **Node.js** with Express
+- **OpenAI API** (via Nebius) for AI diagnostics
+- **Multer** for image upload handling
+- **Sharp** for image processing
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## Getting Started
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### Prerequisites
+- Node.js (install with [nvm](https://github.com/nvm-sh/nvm#installing-and-updating))
+- npm or yarn package manager
 
-# Step 3: Install the necessary dependencies.
-npm i
+### Installation
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+1. **Clone the repository**
+   ```bash
+   git clone <YOUR_GIT_URL>
+   cd <YOUR_PROJECT_NAME>
+   ```
 
-**Edit a file directly in GitHub**
+2. **Install dependencies**
+   ```bash
+   # Frontend dependencies
+   npm install
+   
+   # Backend dependencies
+   cd backend
+   npm install
+   cd ..
+   ```
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+3. **Environment Setup**
+   - Configure AI service API keys in backend environment
+   - Set up image upload directories
 
-**Use GitHub Codespaces**
+4. **Start the application**
+   ```bash
+   # Start frontend (from project root)
+   npm run dev
+   
+   # Start backend (in separate terminal)
+   cd backend
+   npm start
+   ```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## API Endpoints
 
-## What technologies are used for this project?
+- `POST /api/diagnosis` - Create new diagnosis with AI analysis
+- `GET /api/patients` - Retrieve patient records
+- `GET /api/community/stats` - Community health statistics
+- `GET /api/reports` - Generate health reports
 
-This project is built with:
+## Contributing
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+This project supports rural healthcare initiatives. Contributions are welcome to improve AI accuracy, add new features, or enhance user experience for ASHA workers.
 
-## How can I deploy this project?
 
-Simply open [Lovable](https://lovable.dev/projects/09245f87-f3e3-47c9-9e65-a7de89f4e4c0) and click on Share -> Publish.
+## License
 
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+Built for rural healthcare support and community health improvement.
