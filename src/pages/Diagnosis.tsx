@@ -1,4 +1,3 @@
-
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,12 +7,15 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Camera, Upload, ArrowLeft, Send } from 'lucide-react';
+import { Camera, Upload, ArrowLeft, Send, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import apiService from '@/services/api';
 
 const Diagnosis = () => {
   const [step, setStep] = useState(1);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [patientData, setPatientData] = useState({
     name: '',
     age: '',
@@ -31,6 +33,27 @@ const Diagnosis = () => {
   const handleImageCapture = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // Validate file size (10MB limit)
+      if (file.size > 10485760) {
+        toast({
+          title: "File too large",
+          description: "Please select an image smaller than 10MB",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Invalid file type",
+          description: "Please select an image file",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      setImageFile(file);
       const reader = new FileReader();
       reader.onload = (e) => {
         setCapturedImage(e.target?.result as string);
@@ -40,57 +63,48 @@ const Diagnosis = () => {
     }
   };
 
-  const simulateAnalysis = () => {
-    // Simulate AI analysis with realistic medical conditions
-    const conditions = [
-      {
-        name: "Fungal Infection (Dermatophytosis)",
-        confidence: 87,
-        severity: "Moderate",
-        treatment: "Antifungal cream (Clotrimazole) twice daily",
-        followUp: "Review in 1 week"
-      },
-      {
-        name: "Contact Dermatitis",
-        confidence: 78,
-        severity: "Mild",
-        treatment: "Avoid irritants, apply moisturizer",
-        followUp: "Review in 3 days"
-      },
-      {
-        name: "Bacterial Infection",
-        confidence: 65,
-        severity: "Severe",
-        treatment: "Antibiotic cream, refer to PHC",
-        followUp: "Immediate referral required"
-      }
-    ];
-
-    const randomCondition = conditions[Math.floor(Math.random() * conditions.length)];
-    
-    setAnalysis({
-      primary_condition: randomCondition,
-      risk_level: randomCondition.severity,
-      recommendations: [
-        "Keep the affected area clean and dry",
-        "Apply prescribed medication as directed",
-        "Monitor for signs of improvement",
-        "Return if condition worsens"
-      ],
-      referral_needed: randomCondition.severity === "Severe"
-    });
-    
-    setStep(4);
-    
-    toast({
-      title: "Analysis Complete",
-      description: `Primary diagnosis: ${randomCondition.name}`,
-    });
-  };
-
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (step === 3) {
-      simulateAnalysis();
+      setIsAnalyzing(true);
+      
+      try {
+        // Create FormData for file upload
+        const formData = new FormData();
+        if (imageFile) {
+          formData.append('image', imageFile);
+        }
+        
+        // Add patient data
+        Object.entries(patientData).forEach(([key, value]) => {
+          formData.append(key, value);
+        });
+
+        toast({
+          title: "Analyzing image...",
+          description: "AI is processing your diagnosis. This may take a moment.",
+        });
+
+        const response = await apiService.createDiagnosis(formData);
+        
+        if (response.success) {
+          setAnalysis(response.diagnosis);
+          setStep(4);
+          
+          toast({
+            title: "Analysis Complete",
+            description: `Primary diagnosis: ${response.diagnosis.primaryCondition}`,
+          });
+        }
+      } catch (error) {
+        console.error('Diagnosis error:', error);
+        toast({
+          title: "Analysis Failed",
+          description: error.message || "Failed to analyze image. Please try again.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsAnalyzing(false);
+      }
     }
   };
 
@@ -99,6 +113,15 @@ const Diagnosis = () => {
       case 'Mild': return 'bg-green-100 text-green-800';
       case 'Moderate': return 'bg-yellow-100 text-yellow-800';
       case 'Severe': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getRiskLevelColor = (riskLevel: string) => {
+    switch (riskLevel) {
+      case 'GREEN': return 'bg-green-100 text-green-800';
+      case 'YELLOW': return 'bg-yellow-100 text-yellow-800';
+      case 'RED': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -176,6 +199,9 @@ const Diagnosis = () => {
                     className="hidden"
                   />
                 </div>
+                <p className="text-sm text-gray-500 text-center">
+                  Supported formats: JPG, PNG, WEBP (Max 10MB)
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -381,14 +407,24 @@ const Diagnosis = () => {
               <div className="bg-blue-50 p-6 rounded-lg">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Primary Diagnosis</h3>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xl font-medium">{analysis.primary_condition.name}</span>
-                  <Badge className={getSeverityColor(analysis.primary_condition.severity)}>
-                    {analysis.primary_condition.severity}
-                  </Badge>
+                  <span className="text-xl font-medium">{analysis.primaryCondition}</span>
+                  <div className="flex space-x-2">
+                    <Badge className={getSeverityColor(analysis.severity)}>
+                      {analysis.severity}
+                    </Badge>
+                    <Badge className={getRiskLevelColor(analysis.riskLevel)}>
+                      {analysis.riskLevel}
+                    </Badge>
+                  </div>
                 </div>
-                <p className="text-gray-600">
-                  Confidence: {analysis.primary_condition.confidence}%
+                <p className="text-gray-600 mb-2">
+                  Confidence: {analysis.confidence}%
                 </p>
+                {analysis.reasoning && (
+                  <p className="text-sm text-gray-700 italic">
+                    {analysis.reasoning}
+                  </p>
+                )}
               </div>
 
               {/* Treatment Recommendations */}
@@ -396,30 +432,47 @@ const Diagnosis = () => {
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Treatment Recommendations</h3>
                 <div className="bg-green-50 p-4 rounded-lg">
                   <p className="font-medium text-green-800 mb-2">Primary Treatment:</p>
-                  <p className="text-green-700">{analysis.primary_condition.treatment}</p>
+                  <p className="text-green-700">{analysis.treatment}</p>
                 </div>
               </div>
 
               {/* General Recommendations */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">General Care Instructions</h3>
-                <ul className="space-y-2">
-                  {analysis.recommendations.map((rec: string, index: number) => (
-                    <li key={index} className="flex items-start">
-                      <span className="text-blue-600 mr-2">•</span>
-                      <span className="text-gray-700">{rec}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              {analysis.recommendations && analysis.recommendations.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">General Care Instructions</h3>
+                  <ul className="space-y-2">
+                    {analysis.recommendations.map((rec: string, index: number) => (
+                      <li key={index} className="flex items-start">
+                        <span className="text-blue-600 mr-2">•</span>
+                        <span className="text-gray-700">{rec}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Warning Signs */}
+              {analysis.warningSigns && analysis.warningSigns.length > 0 && (
+                <div className="bg-orange-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold text-orange-800 mb-2">Warning Signs to Watch For</h3>
+                  <ul className="space-y-1">
+                    {analysis.warningSigns.map((sign: string, index: number) => (
+                      <li key={index} className="flex items-start text-orange-700">
+                        <span className="text-orange-600 mr-2">⚠️</span>
+                        <span>{sign}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               {/* Follow-up */}
               <div className="bg-yellow-50 p-4 rounded-lg">
                 <h3 className="text-lg font-semibold text-yellow-800 mb-2">Follow-up</h3>
-                <p className="text-yellow-700">{analysis.primary_condition.followUp}</p>
-                {analysis.referral_needed && (
+                <p className="text-yellow-700">{analysis.followUp}</p>
+                {analysis.referralNeeded && (
                   <div className="mt-3 p-3 bg-red-100 rounded border border-red-200">
-                    <p className="text-red-800 font-medium">⚠️ Referral to PHC/Hospital recommended</p>
+                    <p className="text-red-800 font-medium">🏥 Referral to PHC/Hospital recommended</p>
                   </div>
                 )}
               </div>
@@ -448,6 +501,21 @@ const Diagnosis = () => {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Loading overlay for AI analysis */}
+        {isAnalyzing && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <Card className="bg-white p-8 max-w-md mx-4">
+              <div className="text-center">
+                <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-blue-600" />
+                <h3 className="text-lg font-semibold mb-2">Analyzing Image...</h3>
+                <p className="text-gray-600">
+                  Our AI is carefully examining the image and symptoms. This may take up to 30 seconds.
+                </p>
+              </div>
+            </Card>
+          </div>
         )}
       </main>
     </div>

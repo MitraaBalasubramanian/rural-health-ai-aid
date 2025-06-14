@@ -1,45 +1,84 @@
-
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Download, Share, Eye, FileText, Calendar, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Download, Share, Eye, FileText, Calendar, BarChart3, Loader2 } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+import apiService from '@/services/api';
 
 const Reports = () => {
   const navigate = useNavigate();
+  const [reports, setReports] = useState([]);
+  const [monthlyStats, setMonthlyStats] = useState({
+    totalReports: 0,
+    diagnosticReports: 0,
+    referralReports: 0,
+    completedCases: 0
+  });
+  const [loading, setLoading] = useState(true);
 
-  const recentReports = [
-    {
-      id: 1,
-      patientName: "Rajesh Kumar",
-      condition: "Fungal Infection",
-      date: "2024-01-15",
-      status: "Completed",
-      type: "Diagnostic Report"
-    },
-    {
-      id: 2,
-      patientName: "Priya Sharma",
-      condition: "Contact Dermatitis",
-      date: "2024-01-14",
-      status: "Under Review",
-      type: "Diagnostic Report"
-    },
-    {
-      id: 3,
-      patientName: "Amit Singh",
-      condition: "Bacterial Infection",
-      date: "2024-01-13",
-      status: "Referred",
-      type: "Referral Report"
+  useEffect(() => {
+    loadReports();
+    loadMonthlyStats();
+  }, []);
+
+  const loadReports = async () => {
+    try {
+      const response = await apiService.getReports({ limit: 10 });
+      if (response.success) {
+        setReports(response.reports);
+      }
+    } catch (error) {
+      console.error('Failed to load reports:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load reports. Using demo data.",
+        variant: "destructive"
+      });
+      // Fallback to demo data
+      setReports([
+        {
+          id: 1,
+          patientName: "Rajesh Kumar",
+          condition: "Fungal Infection",
+          date: "2024-01-15",
+          status: "Completed",
+          type: "Diagnostic Report"
+        }
+      ]);
     }
-  ];
+  };
 
-  const monthlyStats = {
-    totalReports: 45,
-    diagnosticReports: 38,
-    referralReports: 7,
-    completedCases: 35
+  const loadMonthlyStats = async () => {
+    try {
+      const response = await apiService.getMonthlyStats();
+      if (response.success) {
+        setMonthlyStats(response.stats);
+      }
+    } catch (error) {
+      console.error('Failed to load monthly stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExportReports = async (format: string) => {
+    try {
+      const response = await apiService.exportReports({ format });
+      if (response.success) {
+        toast({
+          title: "Export Successful",
+          description: `${response.exportedCount} reports exported as ${format.toUpperCase()}`,
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to export reports. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -50,6 +89,22 @@ const Reports = () => {
       default: return 'bg-gray-100 text-gray-800';
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center">
+        <Card className="p-8">
+          <div className="flex items-center space-x-4">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            <div>
+              <h3 className="text-lg font-semibold">Loading Reports...</h3>
+              <p className="text-gray-600">Fetching report data from server</p>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
@@ -68,7 +123,10 @@ const Reports = () => {
               </Button>
               <h1 className="text-xl font-semibold text-gray-900">Reports & Analytics</h1>
             </div>
-            <Button className="bg-blue-600 hover:bg-blue-700">
+            <Button 
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={() => handleExportReports('pdf')}
+            >
               <BarChart3 className="h-4 w-4 mr-2" />
               Generate Monthly Report
             </Button>
@@ -114,17 +172,29 @@ const Reports = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Button variant="outline" className="h-auto p-4 flex-col">
+              <Button 
+                variant="outline" 
+                className="h-auto p-4 flex-col"
+                onClick={() => handleExportReports('weekly')}
+              >
                 <Calendar className="h-8 w-8 mb-2 text-blue-600" />
                 <span className="font-semibold">Weekly Summary</span>
                 <span className="text-sm text-gray-600">Generate this week's report</span>
               </Button>
-              <Button variant="outline" className="h-auto p-4 flex-col">
+              <Button 
+                variant="outline" 
+                className="h-auto p-4 flex-col"
+                onClick={() => handleExportReports('monthly')}
+              >
                 <BarChart3 className="h-8 w-8 mb-2 text-green-600" />
                 <span className="font-semibold">Monthly Analytics</span>
                 <span className="text-sm text-gray-600">Detailed monthly insights</span>
               </Button>
-              <Button variant="outline" className="h-auto p-4 flex-col">
+              <Button 
+                variant="outline" 
+                className="h-auto p-4 flex-col"
+                onClick={() => handleExportReports('custom')}
+              >
                 <FileText className="h-8 w-8 mb-2 text-purple-600" />
                 <span className="font-semibold">Custom Report</span>
                 <span className="text-sm text-gray-600">Create custom date range</span>
@@ -141,7 +211,7 @@ const Reports = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentReports.map((report) => (
+              {reports.map((report) => (
                 <div key={report.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
@@ -171,7 +241,11 @@ const Reports = () => {
                         <Eye className="h-4 w-4 mr-1" />
                         View
                       </Button>
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleExportReports('pdf')}
+                      >
                         <Download className="h-4 w-4 mr-1" />
                         Download
                       </Button>
@@ -221,11 +295,17 @@ const Reports = () => {
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-4">
-              <Button variant="outline">
+              <Button 
+                variant="outline"
+                onClick={() => handleExportReports('pdf')}
+              >
                 <Download className="h-4 w-4 mr-2" />
                 Export as PDF
               </Button>
-              <Button variant="outline">
+              <Button 
+                variant="outline"
+                onClick={() => handleExportReports('excel')}
+              >
                 <Download className="h-4 w-4 mr-2" />
                 Export as Excel
               </Button>
