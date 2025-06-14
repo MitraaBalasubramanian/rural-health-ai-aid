@@ -26,7 +26,13 @@ app.use(limiter);
 
 // CORS configuration
 app.use(cors({
-  origin: 'http://localhost:8080',
+  origin: [
+    'http://localhost:8080',
+    'https://localhost:8080', 
+    /\.netlify\.app$/,
+    /\.vercel\.app$/,
+    /\.onrender\.com$/
+  ],
   credentials: true
 }));
 

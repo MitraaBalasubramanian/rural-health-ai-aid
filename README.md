@@ -80,6 +80,8 @@ Arogya Sahayak helps ASHA workers with:
 3. **Environment Setup**
    - Configure AI service API keys in backend environment
    - Set up image upload directories
+   - Set environment variables in Netlify dashboard:
+     - `VITE_API_BASE_URL=https://rural-health-ai-aid.onrender.com/api`
 
 4. **Start the application**
    ```bash
@@ -106,3 +108,13 @@ This project supports rural healthcare initiatives. Contributions are welcome to
 ## License
 
 Built for rural healthcare support and community health improvement.
+
+### Backend Deployment
+Your backend is already deployed at: **https://rural-health-ai-aid.onrender.com**
+
+Deploy your backend to platforms like:
+- **Heroku**: Easy deployment with git integration
+- **Railway**: Modern platform with automatic deployments  
+- **Render**: Free tier available for small projects ✅ (Currently deployed)
+
+Update `VITE_API_BASE_URL` in Netlify environment variables to point to your deployed backend.
