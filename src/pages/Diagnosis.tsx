@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Camera, Upload, ArrowLeft, Send, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import apiService from '@/services/api';
+import { addPatient, addDiagnosis, patients } from '@/constants/storage';
 
 const Diagnosis = () => {
   const [step, setStep] = useState(1);
@@ -68,38 +69,98 @@ const Diagnosis = () => {
       setIsAnalyzing(true);
       
       try {
-        // Create FormData for file upload
-        const formData = new FormData();
-        if (imageFile) {
-          formData.append('image', imageFile);
-        }
-        
-        // Add patient data
-        Object.entries(patientData).forEach(([key, value]) => {
-          formData.append(key, value);
-        });
-
         toast({
           title: "Analyzing image...",
           description: "AI is processing your diagnosis. This may take a moment.",
         });
 
-        const response = await apiService.createDiagnosis(formData);
-        
-        if (response.success) {
-          setAnalysis(response.diagnosis);
-          setStep(4);
-          
-          toast({
-            title: "Analysis Complete",
-            description: `Primary diagnosis: ${response.diagnosis.primaryCondition}`,
+        // Simulate AI analysis delay
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // Create mock analysis result
+        const mockAnalysis = {
+          primaryCondition: "Fungal Infection",
+          confidence: 92,
+          severity: "Moderate",
+          riskLevel: "YELLOW",
+          reasoning: "Based on the visual characteristics and symptoms described, this appears to be a common fungal skin infection.",
+          treatment: "Apply antifungal cream twice daily for 2 weeks. Keep area clean and dry.",
+          recommendations: [
+            "Keep affected area clean and dry",
+            "Avoid tight clothing over affected area", 
+            "Complete full course of medication",
+            "Return if symptoms worsen or don't improve in 1 week"
+          ],
+          warningSigns: [
+            "Spreading redness or warmth",
+            "Increased pain or swelling",
+            "Fever or systemic symptoms",
+            "No improvement after 1 week of treatment"
+          ],
+          followUp: "Follow-up in 1 week to assess progress. Return immediately if warning signs develop.",
+          referralNeeded: false
+        };
+
+        // Check if patient already exists
+        let existingPatient = patients.find(p => 
+          p.name.toLowerCase() === patientData.name.toLowerCase() && 
+          p.age === parseInt(patientData.age)
+        );
+
+        let patientId;
+        if (!existingPatient) {
+          // Add new patient
+          const newPatient = addPatient({
+            name: patientData.name,
+            age: parseInt(patientData.age),
+            gender: patientData.gender as 'male' | 'female' | 'other',
+            phone: '',
+            address: 'Rural Area',
+            lastVisit: new Date().toISOString().split('T')[0],
+            totalVisits: 1,
+            conditions: [mockAnalysis.primaryCondition],
+            status: 'Under Treatment',
+            riskLevel: mockAnalysis.riskLevel === 'GREEN' ? 'Low' : 
+                      mockAnalysis.riskLevel === 'YELLOW' ? 'Medium' : 'High'
           });
+          patientId = newPatient.id;
+        } else {
+          patientId = existingPatient.id;
+          // Update existing patient
+          if (!existingPatient.conditions.includes(mockAnalysis.primaryCondition)) {
+            existingPatient.conditions.push(mockAnalysis.primaryCondition);
+          }
+          existingPatient.lastVisit = new Date().toISOString().split('T')[0];
+          existingPatient.totalVisits += 1;
         }
+
+        // Add diagnosis
+        const newDiagnosis = addDiagnosis({
+          patientId,
+          patientName: patientData.name,
+          condition: mockAnalysis.primaryCondition,
+          date: new Date().toISOString().split('T')[0],
+          status: 'Completed',
+          type: 'Diagnostic',
+          confidence: mockAnalysis.confidence,
+          severity: mockAnalysis.severity as 'Mild' | 'Moderate' | 'Severe',
+          treatment: mockAnalysis.treatment,
+          recommendations: mockAnalysis.recommendations,
+          followUp: mockAnalysis.followUp
+        });
+        
+        setAnalysis(mockAnalysis);
+        setStep(4);
+        
+        toast({
+          title: "Analysis Complete",
+          description: `Primary diagnosis: ${mockAnalysis.primaryCondition}`,
+        });
       } catch (error) {
         console.error('Diagnosis error:', error);
         toast({
           title: "Analysis Failed",
-          description: error.message || "Failed to analyze image. Please try again.",
+          description: "Failed to analyze image. Please try again.",
           variant: "destructive"
         });
       } finally {

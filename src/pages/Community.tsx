@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, AlertTriangle, TrendingUp, Users, MapPin, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import apiService from '@/services/api';
+import { communityCases, patients, diagnoses } from '@/constants/storage';
 
 const Community = () => {
   const navigate = useNavigate();
@@ -23,55 +23,90 @@ const Community = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadCommunityData();
+    // Simulate loading delay
+    setTimeout(() => {
+      loadCommunityData();
+      setLoading(false);
+    }, 1000);
   }, []);
 
-  const loadCommunityData = async () => {
-    try {
-      const [statsResponse, outbreaksResponse, trendsResponse] = await Promise.all([
-        apiService.getCommunityStats(),
-        apiService.getOutbreaks(),
-        apiService.getTrends()
-      ]);
+  const loadCommunityData = () => {
+    // Calculate stats from storage data
+    const totalCases = communityCases.reduce((sum, case_) => sum + case_.affectedCount, 0);
+    const activeCases = communityCases
+      .filter(case_ => case_.status === 'Active')
+      .reduce((sum, case_) => sum + case_.affectedCount, 0);
+    const resolvedCases = communityCases
+      .filter(case_ => case_.status === 'Resolved')
+      .reduce((sum, case_) => sum + case_.affectedCount, 0);
+    const outbreakAlerts = communityCases.filter(case_ => case_.severity === 'High').length;
 
-      if (statsResponse.success) {
-        setCommunityStats(statsResponse.stats);
-      }
-      if (outbreaksResponse.success) {
-        setOutbreaks(outbreaksResponse.outbreaks);
-      }
-      if (trendsResponse.success) {
-        setTrends(trendsResponse.trends);
-      }
-    } catch (error) {
-      console.error('Failed to load community data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load community data. Using demo data.",
-        variant: "destructive"
-      });
-      // Fallback to demo data
-      setCommunityStats({
-        overview: {
-          totalCases: 24,
-          activeCases: 8,
-          recoveredCases: 16,
-          outbreakAlerts: 2
+    setCommunityStats({
+      overview: {
+        totalCases,
+        activeCases,
+        recoveredCases: resolvedCases,
+        outbreakAlerts
+      },
+      villages: [
+        {
+          name: "Rampur",
+          population: 1200,
+          activeCases: 5,
+          commonCondition: "Fungal Infections",
+          riskLevel: "Medium",
+          lastUpdated: "2024-01-15"
         },
-        villages: [
-          {
-            name: "Rampur",
-            population: 1200,
-            activeCases: 5,
-            commonCondition: "Fungal Infections",
-            riskLevel: "Medium",
-            lastUpdated: "2024-01-15"
-          }
-        ]
-      });
-    } finally {
-      setLoading(false);
-    }
+        {
+          name: "Sundarpur", 
+          population: 800,
+          activeCases: 8,
+          commonCondition: "Water-borne Illness",
+          riskLevel: "High",
+          lastUpdated: "2024-01-14"
+        },
+        {
+          name: "Greenfield",
+          population: 600,
+          activeCases: 1,
+          commonCondition: "Allergic Reactions",
+          riskLevel: "Low",
+          lastUpdated: "2024-01-13"
+        }
+      ]
+    });
+
+    // Set outbreak alerts from high severity cases
+    const highSeverityCases = communityCases.filter(case_ => case_.severity === 'High');
+    setOutbreaks(highSeverityCases.map(case_ => ({
+      condition: case_.condition,
+      village: case_.location,
+      cases: case_.affectedCount,
+      severity: case_.severity,
+      recommendation: "Immediate intervention required. Contact PHC for support."
+    })));
+
+    // Set trends data
+    setTrends([
+      {
+        condition: "Fungal Infections",
+        period: "This week",
+        trend: "increasing",
+        change: "+15%"
+      },
+      {
+        condition: "Contact Dermatitis", 
+        period: "This week",
+        trend: "stable",
+        change: "0%"
+      },
+      {
+        condition: "Bacterial Infections",
+        period: "This week", 
+        trend: "decreasing",
+        change: "-8%"
+      }
+    ]);
   };
 
   const getRiskColor = (risk: string) => {

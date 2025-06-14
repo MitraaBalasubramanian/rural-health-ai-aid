@@ -6,82 +6,47 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Search, Plus, Calendar, FileText, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import apiService from '@/services/api';
+import { patients, diagnoses, getDiagnosesByPatientId, refreshStorageData, type Patient } from '@/constants/storage';
 
 const Patients = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
-  const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPatients, setCurrentPatients] = useState<Patient[]>([]);
   const [stats, setStats] = useState({
     total: 0,
     recovered: 0,
     underTreatment: 0,
     referred: 0
   });
-  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [showReport, setShowReport] = useState(false);
 
   useEffect(() => {
-    loadPatients();
-    loadStats();
+    // Refresh data from localStorage and update state
+    refreshStorageData();
+    setCurrentPatients([...patients]);
+    
+    // Simulate loading delay
+    setTimeout(() => {
+      loadStats();
+      setLoading(false);
+    }, 1000);
   }, []);
 
-  const loadPatients = async () => {
-    try {
-      const response = await apiService.getPatients({ limit: 20 });
-      if (response.success) {
-        // Add mock status and condition data for display
-        const patientsWithStatus = response.patients.map(patient => ({
-          ...patient,
-          lastVisit: patient.updatedAt.split('T')[0],
-          lastCondition: "Skin Condition",
-          status: Math.random() > 0.5 ? "Recovered" : "Under Treatment",
-          cases: Math.floor(Math.random() * 5) + 1
-        }));
-        setPatients(patientsWithStatus);
-      }
-    } catch (error) {
-      console.error('Failed to load patients:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load patients. Using demo data.",
-        variant: "destructive"
-      });
-      // Fallback to demo data
-      setPatients([
-        {
-          id: 1,
-          name: "Rajesh Kumar",
-          age: 45,
-          gender: "Male",
-          village: "Rampur",
-          lastVisit: "2024-01-15",
-          lastCondition: "Fungal Infection",
-          status: "Recovered",
-          cases: 3
-        }
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadStats = async () => {
-    try {
-      const response = await apiService.getPatientStats();
-      if (response.success) {
-        setStats({
-          total: response.stats.total,
-          recovered: Math.floor(response.stats.total * 0.6),
-          underTreatment: Math.floor(response.stats.total * 0.3),
-          referred: Math.floor(response.stats.total * 0.1)
-        });
-      }
-    } catch (error) {
-      console.error('Failed to load stats:', error);
-    }
+  const loadStats = () => {
+    const total = patients.length;
+    const recovered = patients.filter(p => p.status === 'Recovered').length;
+    const underTreatment = patients.filter(p => p.status === 'Under Treatment').length;
+    const referred = patients.filter(p => p.status === 'Referred').length;
+    
+    setStats({
+      total,
+      recovered,
+      underTreatment,
+      referred
+    });
   };
 
   if (loading) {
@@ -92,7 +57,7 @@ const Patients = () => {
             <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
             <div>
               <h3 className="text-lg font-semibold">Loading Patients...</h3>
-              <p className="text-gray-600">Fetching patient data from server</p>
+              <p className="text-gray-600">Fetching patient data from storage</p>
             </div>
           </div>
         </Card>
@@ -100,37 +65,33 @@ const Patients = () => {
     );
   }
 
-  const filteredPatients = patients.filter(patient =>
+  const filteredPatients = currentPatients.filter(patient =>
     patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    patient.village.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (patient.lastCondition && patient.lastCondition.toLowerCase().includes(searchQuery.toLowerCase()))
+    patient.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    patient.conditions.some(condition => 
+      condition.toLowerCase().includes(searchQuery.toLowerCase())
+    )
   );
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Recovered': return 'bg-green-100 text-green-800';
-      case 'Improved': return 'bg-blue-100 text-blue-800';
+      case 'Active': return 'bg-blue-100 text-blue-800';
       case 'Under Treatment': return 'bg-yellow-100 text-yellow-800';
       case 'Referred': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const handleViewHistory = (patient: any) => {
+  const handleViewHistory = (patient: Patient) => {
     setSelectedPatient(patient);
     setShowHistory(true);
   };
 
-  const handleViewReport = (patient: any) => {
+  const handleViewReport = (patient: Patient) => {
     setSelectedPatient(patient);
     setShowReport(true);
   };
-
-  const mockHistory = [
-    { date: '2024-01-15', condition: 'Fungal Infection', status: 'Recovered', treatment: 'Antifungal cream' },
-    { date: '2024-01-10', condition: 'Skin Rash', status: 'Treated', treatment: 'Topical steroid' },
-    { date: '2024-01-05', condition: 'Minor Cut', status: 'Healed', treatment: 'Antiseptic dressing' }
-  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
@@ -215,9 +176,14 @@ const Patients = () => {
                   <div className="flex-1">
                     <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 mb-3">
                       <h3 className="text-base sm:text-lg font-semibold text-gray-900">{patient.name}</h3>
-                      <Badge className={getStatusColor(patient.status)}>
-                        {patient.status}
-                      </Badge>
+                      <div className="flex space-x-2">
+                        <Badge className={getStatusColor(patient.status)}>
+                          {patient.status}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {patient.riskLevel} Risk
+                        </Badge>
+                      </div>
                     </div>
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600 mb-3">
@@ -225,19 +191,25 @@ const Patients = () => {
                         <span className="font-medium">Age:</span> {patient.age} • {patient.gender}
                       </div>
                       <div>
-                        <span className="font-medium">Village:</span> {patient.village}
+                        <span className="font-medium">Address:</span> {patient.address}
                       </div>
                       <div>
                         <span className="font-medium">Last Visit:</span> {patient.lastVisit}
                       </div>
                       <div>
-                        <span className="font-medium">Total Cases:</span> {patient.cases}
+                        <span className="font-medium">Total Visits:</span> {patient.totalVisits}
                       </div>
                     </div>
                     
                     <div>
-                      <span className="text-xs sm:text-sm font-medium text-gray-700">Last Condition:</span>
-                      <span className="text-xs sm:text-sm text-gray-600 ml-2">{patient.lastCondition}</span>
+                      <span className="text-xs sm:text-sm font-medium text-gray-700">Conditions:</span>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {patient.conditions.map((condition, index) => (
+                          <Badge key={index} variant="secondary" className="text-xs">
+                            {condition}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
                   </div>
                   
@@ -303,18 +275,22 @@ const Patients = () => {
             </div>
             <div className="p-4 sm:p-6">
               <div className="space-y-4">
-                {mockHistory.map((record, index) => (
-                  <div key={index} className="border rounded-lg p-3 sm:p-4">
+                {getDiagnosesByPatientId(selectedPatient.id).map((diagnosis) => (
+                  <div key={diagnosis.id} className="border rounded-lg p-3 sm:p-4">
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-2">
-                      <h3 className="font-medium text-gray-900">{record.condition}</h3>
-                      <span className="text-xs sm:text-sm text-gray-500 mt-1 sm:mt-0">{record.date}</span>
+                      <h3 className="font-medium text-gray-900">{diagnosis.condition}</h3>
+                      <span className="text-xs sm:text-sm text-gray-500 mt-1 sm:mt-0">{diagnosis.date}</span>
                     </div>
                     <div className="text-xs sm:text-sm text-gray-600 space-y-1">
-                      <p><span className="font-medium">Status:</span> {record.status}</p>
-                      <p><span className="font-medium">Treatment:</span> {record.treatment}</p>
+                      <p><span className="font-medium">Status:</span> {diagnosis.status}</p>
+                      <p><span className="font-medium">Treatment:</span> {diagnosis.treatment}</p>
+                      <p><span className="font-medium">Confidence:</span> {diagnosis.confidence}%</p>
                     </div>
                   </div>
                 ))}
+                {getDiagnosesByPatientId(selectedPatient.id).length === 0 && (
+                  <p className="text-gray-500 text-center py-4">No diagnosis history available</p>
+                )}
               </div>
             </div>
           </div>
@@ -337,7 +313,10 @@ const Patients = () => {
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="font-medium">Patient Name:</span> {selectedPatient.name}
+                    <span className="font-medium">Patient ID:</span> {selectedPatient.id}
+                  </div>
+                  <div>
+                    <span className="font-medium">Name:</span> {selectedPatient.name}
                   </div>
                   <div>
                     <span className="font-medium">Age:</span> {selectedPatient.age}
@@ -346,33 +325,47 @@ const Patients = () => {
                     <span className="font-medium">Gender:</span> {selectedPatient.gender}
                   </div>
                   <div>
-                    <span className="font-medium">Village:</span> {selectedPatient.village}
+                    <span className="font-medium">Phone:</span> {selectedPatient.phone}
+                  </div>
+                  <div>
+                    <span className="font-medium">Address:</span> {selectedPatient.address}
                   </div>
                   <div>
                     <span className="font-medium">Last Visit:</span> {selectedPatient.lastVisit}
                   </div>
                   <div>
-                    <span className="font-medium">Total Cases:</span> {selectedPatient.cases}
+                    <span className="font-medium">Total Visits:</span> {selectedPatient.totalVisits}
                   </div>
                 </div>
                 
                 <div className="border-t pt-4">
-                  <h3 className="font-medium mb-2">Current Condition</h3>
-                  <p className="text-sm text-gray-600">{selectedPatient.lastCondition}</p>
+                  <h3 className="font-medium mb-2">Current Conditions</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedPatient.conditions.map((condition, index) => (
+                      <Badge key={index} variant="secondary">
+                        {condition}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
                 
                 <div className="border-t pt-4">
-                  <h3 className="font-medium mb-2">Status</h3>
-                  <Badge className={getStatusColor(selectedPatient.status)}>
-                    {selectedPatient.status}
-                  </Badge>
+                  <h3 className="font-medium mb-2">Status & Risk Level</h3>
+                  <div className="flex space-x-2">
+                    <Badge className={getStatusColor(selectedPatient.status)}>
+                      {selectedPatient.status}
+                    </Badge>
+                    <Badge variant="outline">
+                      {selectedPatient.riskLevel} Risk
+                    </Badge>
+                  </div>
                 </div>
                 
                 <div className="border-t pt-4">
                   <h3 className="font-medium mb-2">Recommendations</h3>
                   <p className="text-sm text-gray-600">
                     Continue current treatment plan. Follow up in 2 weeks if symptoms persist.
-                    Maintain good hygiene and avoid known allergens.
+                    Maintain good hygiene and avoid known allergens. Monitor for any changes in condition.
                   </p>
                 </div>
               </div>
