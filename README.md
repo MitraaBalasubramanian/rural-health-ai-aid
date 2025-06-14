@@ -102,12 +102,6 @@ Arogya Sahayak helps ASHA workers with:
 
 This project supports rural healthcare initiatives. Contributions are welcome to improve AI accuracy, add new features, or enhance user experience for ASHA workers.
 
-## Deployment
-
-Deploy using [Lovable](https://lovable.dev/projects/09245f87-f3e3-47c9-9e65-a7de89f4e4c0) platform:
-1. Open your Lovable project
-2. Click Share → Publish
-3. Configure custom domain if needed in Project → Settings → Domains
 
 ## License
 
