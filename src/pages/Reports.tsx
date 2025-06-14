@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -5,8 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ArrowLeft, Download, Share, Eye, FileText, Calendar as CalendarIcon, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Download, Share, Eye, FileText, Calendar as CalendarIcon, BarChart3, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
+import apiService from '@/services/api';
 
 const Reports = () => {
   const navigate = useNavigate();
@@ -17,6 +20,30 @@ const Reports = () => {
   const [customDateTo, setCustomDateTo] = useState<Date>();
   const [selectedReport, setSelectedReport] = useState<any>(null);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [monthlyStats, setMonthlyStats] = useState({});
+  const [recentReports, setRecentReports] = useState([
+    {
+      id: 1,
+      patientName: "Rajesh Kumar",
+      condition: "Fungal Infection",
+      date: "2024-01-15",
+      status: "Completed",
+      type: "Diagnostic"
+    },
+    {
+      id: 2,
+      patientName: "Priya Sharma",
+      condition: "Contact Dermatitis",
+      date: "2024-01-14",
+      status: "Under Review",
+      type: "Diagnostic"
+    }
+  ]);
+
+  useEffect(() => {
+    loadMonthlyStats();
+  }, []);
 
   // Simple date formatter
   const formatDate = (date: Date) => {
@@ -39,6 +66,25 @@ const Reports = () => {
       setLoading(false);
     }
   };
+
+  const generateCustomReport = () => {
+    toast({
+      title: "Custom Report Generated",
+      description: "Your custom report has been generated successfully.",
+    });
+    setShowCustomModal(false);
+  };
+
+  const handleViewReport = (report: any) => {
+    setSelectedReport(report);
+    setShowReportModal(true);
+  };
+
+  const handleDownloadReport = (report: any) => {
+    toast({
+      title: "Download Started",
+      description: `Downloading report for ${report.patientName}`,
+    });
   };
 
   const handleShareReport = (report: any) => {
@@ -349,7 +395,6 @@ Rural Health AI Aid System
               </Button>
               <h1 className="text-lg sm:text-xl font-semibold text-gray-900">Reports & Analytics</h1>
             </div>
-            </Button>
           </div>
         </div>
       </header>
@@ -390,6 +435,28 @@ Rural Health AI Aid System
             <CardTitle className="text-lg sm:text-2xl">Quick Actions</CardTitle>
             <CardDescription className="text-sm sm:text-base">Generate and manage your reports</CardDescription>
           </CardHeader>
+          <CardContent className="p-4 sm:p-6 pt-0">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Button 
+                onClick={() => setShowWeeklyModal(true)}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <CalendarIcon className="h-4 w-4 mr-2" />
+                Weekly Summary
+              </Button>
+              <Button 
+                onClick={() => setShowMonthlyModal(true)}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Monthly Analytics
+              </Button>
+              <Button 
+                onClick={() => setShowCustomModal(true)}
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Custom Report
               </Button>
             </div>
           </CardContent>
@@ -401,6 +468,11 @@ Rural Health AI Aid System
             <CardTitle className="text-lg sm:text-2xl">Recent Reports</CardTitle>
             <CardDescription className="text-sm sm:text-base">View and manage your latest diagnostic reports</CardDescription>
           </CardHeader>
+          <CardContent className="p-4 sm:p-6 pt-0">
+            <div className="space-y-4">
+              {recentReports.map((report) => (
+                <div key={report.id} className="border rounded-lg p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex-1">
                       <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 mb-2">
                         <h3 className="font-semibold text-gray-900 text-sm sm:text-base">{report.patientName}</h3>
@@ -442,6 +514,11 @@ Rural Health AI Aid System
                       </Button>
                       <Button 
                         variant="outline" 
+                        size="sm" 
+                        className="flex-1 sm:flex-none text-xs"
+                        onClick={() => handleDownloadReport(report)}
+                      >
+                        <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                         Download
                       </Button>
                       <Button 

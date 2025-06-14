@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,8 +10,23 @@ import apiService from '@/services/api';
 
 const Patients = () => {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchQuery, setSearchQuery] = useState('');
+  const [patients, setPatients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    total: 0,
+    recovered: 0,
+    underTreatment: 0,
+    referred: 0
+  });
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [showReport, setShowReport] = useState(false);
 
+  useEffect(() => {
+    loadPatients();
+    loadStats();
+  }, []);
 
   const loadPatients = async () => {
     try {
@@ -151,6 +165,27 @@ const Patients = () => {
         {/* Summary Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
           <Card className="bg-white shadow-sm">
+            <CardContent className="p-3 sm:p-6 text-center">
+              <div className="text-xl sm:text-3xl font-bold text-blue-600">{stats.total}</div>
+              <div className="text-xs sm:text-sm text-gray-600">Total Patients</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white shadow-sm">
+            <CardContent className="p-3 sm:p-6 text-center">
+              <div className="text-xl sm:text-3xl font-bold text-green-600">{stats.recovered}</div>
+              <div className="text-xs sm:text-sm text-gray-600">Recovered</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white shadow-sm">
+            <CardContent className="p-3 sm:p-6 text-center">
+              <div className="text-xl sm:text-3xl font-bold text-yellow-600">{stats.underTreatment}</div>
+              <div className="text-xs sm:text-sm text-gray-600">Under Treatment</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white shadow-sm">
+            <CardContent className="p-3 sm:p-6 text-center">
+              <div className="text-xl sm:text-3xl font-bold text-red-600">{stats.referred}</div>
+              <div className="text-xs sm:text-sm text-gray-600">Referred</div>
             </CardContent>
           </Card>
         </div>
