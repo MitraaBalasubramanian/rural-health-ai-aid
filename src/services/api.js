@@ -1,6 +1,7 @@
-const API_BASE = process.env.NODE_ENV === 'production' 
-  ? 'https://your-backend-url.com/api' 
-  : 'http://localhost:3001/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 
+  (import.meta.env.MODE === 'production' 
+    ? 'https://your-backend-url.herokuapp.com/api' 
+    : 'http://localhost:3001/api');
 
 class ApiService {
   async request(endpoint, options = {}) {
